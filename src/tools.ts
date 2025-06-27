@@ -29,6 +29,8 @@ import screenshot from './tools/screenshot.js';
 import testing from './tools/testing.js';
 import vision from './tools/vision.js';
 import wait from './tools/wait.js';
+import cdpExecuteScript from './tools/cdp_execute_script.js';
+import cdpNetworkCapture from './tools/cdp_network_capture.js';
 
 import type { Tool } from './tools/tool.js';
 
@@ -47,6 +49,8 @@ export const snapshotTools: Tool<any>[] = [
   ...tabs(true),
   ...testing,
   ...wait(true),
+  ...cdpExecuteScript,
+  ...cdpNetworkCapture,
 ];
 
 export const visionTools: Tool<any>[] = [
@@ -63,4 +67,6 @@ export const visionTools: Tool<any>[] = [
   ...testing,
   ...vision,
   ...wait(false),
+  ...cdpExecuteScript,
+  ...cdpNetworkCapture,
 ];

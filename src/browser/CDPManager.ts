@@ -20,17 +20,15 @@ import type { CDPEvent, CDPError } from '../cdp/types.js';
 
 /**
  * Required CDP domains for comprehensive page analysis
+ * Order matters - some domains depend on others
  */
 const REQUIRED_DOMAINS = [
+  'Runtime',     // Must be first
   'Network',
   'Page',
-  'Runtime',
-  'CSS',
-  'DOM',
+  'DOM',         // Must be before CSS
+  'CSS',         // Depends on DOM
   'Console',
-  'DOMSnapshot',
-  'Emulation',
-  'Overlay',
   'Performance',
   'Security',
   'Fetch'
@@ -324,7 +322,14 @@ export class CDPSession extends EventEmitter {
     try {
       await this.send(`${domain}.enable`);
     } catch (error) {
-      console.warn(`Failed to enable domain ${domain}:`, error);
+      // Some domains might not be available in all contexts, continue anyway
+      if (domain !== 'Runtime' && domain !== 'Network' && domain !== 'Page') {
+        // Only warn for non-critical domains
+        console.warn(`Failed to enable domain ${domain}:`, error);
+      } else {
+        // Re-throw for critical domains
+        throw error;
+      }
     }
   }
 
