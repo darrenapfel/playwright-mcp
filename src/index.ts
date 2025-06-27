@@ -18,6 +18,7 @@ import { createConnection as createConnectionImpl } from './connection.js';
 import type { Connection } from '../index.js';
 import { resolveConfig } from './config.js';
 import { contextFactory } from './browserContextFactory.js';
+import { cdpManager } from './browser/CDPManager.js';
 
 import type { Config } from '../config.js';
 import type { BrowserContext } from 'playwright';
@@ -28,6 +29,9 @@ export async function createConnection(userConfig: Config = {}, contextGetter?: 
   const factory = contextGetter ? new SimpleBrowserContextFactory(contextGetter) : contextFactory(config.browser);
   return createConnectionImpl(config, factory);
 }
+
+// Export cdpManager for external access
+export { cdpManager };
 
 class SimpleBrowserContextFactory implements BrowserContextFactory {
   private readonly _contextGetter: () => Promise<BrowserContext>;

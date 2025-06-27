@@ -21,6 +21,7 @@ import { callOnPageNoTrace, waitForCompletion } from './tools/utils.js';
 import { ManualPromise } from './manualPromise.js';
 import { Tab } from './tab.js';
 import { outputFile } from './config.js';
+import { cdpManager } from './browser/CDPManager.js';
 
 import type { ImageContent, TextContent } from '@modelcontextprotocol/sdk/types.js';
 import type { ModalState, Tool, ToolActionResult } from './tools/tool.js';
@@ -85,6 +86,13 @@ export class Context {
 
   tabs(): Tab[] {
     return this._tabs;
+  }
+
+  /**
+   * Get the CDP manager instance
+   */
+  getCDPManager() {
+    return cdpManager;
   }
 
   currentTabOrDie(): Tab {
@@ -270,11 +278,20 @@ ${code.join('\n')}
     entry.finished = true;
   }
 
-  private _onPageCreated(page: playwright.Page) {
+  private async _onPageCreated(page: playwright.Page) {
     const tab = new Tab(this, page, tab => this._onPageClosed(tab));
     this._tabs.push(tab);
     if (!this._currentTab)
       this._currentTab = tab;
+    
+    // Auto-attach CDP session to the page
+    try {
+      await cdpManager.attachToPage(page);
+      testDebug('CDP session attached to page');
+    } catch (error) {
+      console.error('Failed to attach CDP to page:', error);
+      // Don't fail page creation if CDP attachment fails
+    }
   }
 
   private _onPageClosed(tab: Tab) {
@@ -302,6 +319,10 @@ ${code.join('\n')}
     await promise.then(async ({ browserContext, close }) => {
       if (this.config.saveTrace)
         await browserContext.tracing.stop();
+      
+      // Close all CDP sessions
+      await cdpManager.closeAll();
+      
       await close();
     });
   }
@@ -336,8 +357,8 @@ ${code.join('\n')}
     const { browserContext } = result;
     await this._setupRequestInterception(browserContext);
     for (const page of browserContext.pages())
-      this._onPageCreated(page);
-    browserContext.on('page', page => this._onPageCreated(page));
+      await this._onPageCreated(page);
+    browserContext.on('page', page => void this._onPageCreated(page));
     if (this.config.saveTrace) {
       await browserContext.tracing.start({
         name: 'trace',
